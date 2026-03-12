@@ -1,0 +1,23 @@
+imageType:
+  Original: {}
+  LoG:
+    sigma: [0.5, 1.0, 2.0, 3.0]
+  Wavelet: {}
+
+featureClass:
+  shape: []
+  firstorder: []
+  glcm: []
+  glrlm: []
+  glszm: []
+  gldm: []
+  ngtdm: []
+
+setting:
+  binWidth: 25
+  interpolator: sitkBSpline
+  preCrop: true
+  normalize: false
+  geometryTolerance: 1e-6
+  correctMask: true
+  label: 1
