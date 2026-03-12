@@ -1,0 +1,29 @@
+.venv/
+.codex/
+.claude/
+.cursor/
+.windsurf/
+.roo/
+AGENTS.md
+CLAUDE.md
+CODEX.md
+
+# Raw and derived data trees
+PKG-MU-Glioma-Post/
+processed/
+processed_smoke/
+results/
+metadata/*.csv
+metadata/*.txt
+qc/histograms/
+qc/mask_overlays/
+qc/random_case_panels/
+qc/sampled_timepoints.csv
+
+# Local caches and OS/editor noise
+.DS_Store
+**/.DS_Store
+.cache/
+**/.cache/
+__pycache__/
+*.pyc
