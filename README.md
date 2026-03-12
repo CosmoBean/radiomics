@@ -25,17 +25,19 @@ The core pipeline is implemented in [scripts/run_postoperative_progression_surve
 
 ## Comparative Results
 
-| Setting | Inputs | Held-out design | ROC AUC |
-| --- | --- | --- | ---: |
-| Christodoulou et al. (baseline paper) | Radiomics, postoperative surveillance | 30 patients / 96 scans | 0.80 |
-| Native initial replication | Radiomics only, paper-style replication | 30 patients / 96 scans | 0.599 |
-| Forward radiomics-only | `T1c + FLAIR` radiomics | 30 patients / 84 scans | 0.674 |
-| Paper-style hybrid result | `T1c + FLAIR` radiomics + molecular/basic clinical features | 30 patients / 30 scans | **0.873** |
-| Forward hybrid validation | `T1c + FLAIR` radiomics + molecular/basic clinical features | 30 patients / 84 scans | **0.778** |
+| Setting | Model | Inputs | Held-out design | ROC AUC |
+| --- | --- | --- | --- | ---: |
+| Christodoulou et al. (baseline paper) | LightGBM-256 | Radiomics, postoperative surveillance | 30 patients / 96 scans | 0.80 |
+| Native initial replication | LightGBM-64 | Radiomics only, paper-style replication | 30 patients / 96 scans | 0.599 |
+| Paper-style hybrid attempt | LogReg-48 | `T1c + FLAIR` radiomics + molecular/basic clinical features | 30 patients / 96 scans | 0.621 |
+| Forward radiomics-only | LogReg-32 | `T1c + FLAIR` radiomics | 30 patients / 84 scans | 0.674 |
+| Earliest-scan hybrid screen | LogReg-48 | `T1c + FLAIR` radiomics + molecular/basic clinical features | 30 patients / 30 scans | **0.873** |
+| Forward hybrid validation | LogReg-32 | `T1c + FLAIR` radiomics + molecular/basic clinical features | 30 patients / 84 scans | **0.778** |
 
 ## Interpretation
 
 - Radiomics-only replication did not recover the target performance.
+- Hybrid gains were strong on the stricter forward and earliest-scan tasks, but not on the looser `post_progression` paper-style split.
 - `T1c + FLAIR` was the strongest imaging backbone.
 - Logistic regression was the most stable tabular model in held-out evaluation.
 - The best gains came from adding age, sex, and curated molecular features to the radiomics table.
