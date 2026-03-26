@@ -1852,7 +1852,13 @@ def main() -> None:
             )
     else:
         features = extract_feature_table(cases, args)
-    features = merge_clinical_features(features, cases, args.clinical_feature_set)
+    features = merge_clinical_features(
+        features,
+        cases,
+        args.clinical_feature_set,
+        repo_root=args.repo_root,
+        cache_root=args.cache_root,
+    )
     features.to_csv(feature_csv, index=False)
     write_progress(
         args.output_dir,
@@ -1978,7 +1984,10 @@ def main() -> None:
     ].copy()
     predictions["raw_probability"] = test_raw
     predictions["calibrated_probability"] = test_cal
+    predictions["progression_risk_probability"] = test_cal
+    predictions["progression_risk_percent"] = test_cal * 100.0
     predictions["predicted_class"] = (test_cal >= threshold).astype(int)
+    predictions["predicted_class_by_threshold"] = predictions["predicted_class"]
     predictions.to_csv(args.output_dir / "test_predictions.csv", index=False)
 
     dca = decision_curve(test_df["label"].to_numpy(), test_cal)
