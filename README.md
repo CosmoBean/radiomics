@@ -28,7 +28,7 @@ The core pipeline is implemented in [scripts/run_postoperative_progression_surve
 | Setting | Model | Inputs | Held-out design | ROC AUC |
 | --- | --- | --- | --- | ---: |
 | Christodoulou et al. (baseline paper) | LightGBM-256 | Radiomics, postoperative surveillance | 30 patients / 96 scans | 0.80 |
-| Native initial replication | LightGBM-64 | Radiomics only, paper-style replication | 30 patients / 96 scans | 0.599 |
+| Naive initial replication | LightGBM-64 | Radiomics only, paper-style replication | 30 patients / 96 scans | 0.599 |
 | Paper-style hybrid attempt | LogReg-48 | `T1c + FLAIR` radiomics + molecular/basic clinical features | 30 patients / 96 scans | 0.621 |
 | Forward radiomics-only | LogReg-32 | `T1c + FLAIR` radiomics | 30 patients / 84 scans | 0.674 |
 | Earliest-scan hybrid screen | LogReg-48 | `T1c + FLAIR` radiomics + molecular/basic clinical features | 30 patients / 30 scans | **0.873** |
