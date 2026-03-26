@@ -682,8 +682,14 @@ def build_clinical_feature_frame(
     return clinical
 
 
-def merge_clinical_features(features: pd.DataFrame, cases: pd.DataFrame, feature_set: str) -> pd.DataFrame:
-    clinical = build_clinical_feature_frame(cases, feature_set)
+def merge_clinical_features(
+    features: pd.DataFrame,
+    cases: pd.DataFrame,
+    feature_set: str,
+    repo_root: Path,
+    cache_root: Path,
+) -> pd.DataFrame:
+    clinical = build_clinical_feature_frame(cases, feature_set, repo_root=repo_root, cache_root=cache_root)
     clinical_columns = [column for column in clinical.columns if column not in CASE_ID_COLUMNS]
     if not clinical_columns:
         return features
@@ -1014,6 +1020,7 @@ def candidate_feature_columns(
     df: pd.DataFrame,
     allowed_modalities: list[str] | None = None,
     include_clinical: bool = False,
+    include_engineered: bool = False,
 ) -> list[str]:
     metadata_cols = set(CASE_METADATA_COLUMNS)
     excluded_suffixes = ("_mask_mean", "_mask_std", "_mask_voxels")
@@ -1026,6 +1033,7 @@ def candidate_feature_columns(
         and (
             column.split("_", 1)[0] in allowed
             or (include_clinical and column.startswith(CLINICAL_FEATURE_PREFIX))
+            or (include_engineered and column.startswith(ENGINEERED_FEATURE_PREFIX))
         )
         and pd.api.types.is_numeric_dtype(df[column])
     ]
@@ -1903,6 +1911,8 @@ def main() -> None:
         features,
         allowed_modalities=args.modalities,
         include_clinical=args.clinical_feature_set != "none",
+        include_engineered=args.clinical_feature_set
+        in {"hybrid_engineered", "hybrid_engineered_biologic", "report_core", "report_timing", "report_full"},
     )
     if not all_feature_columns:
         raise ValueError(f"No feature columns found for selected modalities: {args.modalities}")
