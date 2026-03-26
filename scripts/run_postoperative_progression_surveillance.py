@@ -25,6 +25,7 @@ import optuna
 import pandas as pd
 import shap
 import SimpleITK as sitk
+from scipy.ndimage import binary_dilation, generate_binary_structure
 from lightgbm import LGBMClassifier
 from radiomics import featureextractor, logger as radiomics_logger
 from sklearn.ensemble import RandomForestClassifier
@@ -60,6 +61,7 @@ ALL_MODALITIES = tuple(MODALITY_PATH_COLUMNS.keys())
 UNION_LABELS = (1, 2, 3)
 EPS = 1e-8
 CLINICAL_FEATURE_PREFIX = "clin_"
+ENGINEERED_FEATURE_PREFIX = "eng_"
 CASE_ID_COLUMNS = ("patient_id", "timepoint", "timepoint_number")
 CASE_METADATA_COLUMNS = (
     *CASE_ID_COLUMNS,
@@ -92,6 +94,18 @@ HYBRID_BASIC_EXTRA_COLUMNS = (
     "clinical_age_at_diagnosis",
     "clinical_sex_at_birth",
 )
+ENGINEERED_CATEGORICAL_COLUMNS = (
+    "clinical_grade_of_primary_brain_tumor",
+    "clinical_primary_diagnosis",
+    "clinical_previous_brain_tumor",
+    "clinical_grade_of_previous_brain_tumor",
+)
+REPORT_LABEL_MAP = {
+    "et": 1,
+    "netc": 2,
+    "snhf": 3,
+    "rc": 4,
+}
 
 
 @dataclass
@@ -219,7 +233,16 @@ def parse_args() -> argparse.Namespace:
         "--clinical-feature-set",
         type=str,
         default="none",
-        choices=["none", "molecular", "hybrid_basic"],
+        choices=[
+            "none",
+            "molecular",
+            "hybrid_basic",
+            "hybrid_engineered",
+            "hybrid_engineered_biologic",
+            "report_core",
+            "report_timing",
+            "report_full",
+        ],
         help="Optional patient-level non-imaging features to merge into the model table.",
     )
     parser.add_argument(
@@ -401,16 +424,165 @@ def clean_categorical_codes(series: pd.Series) -> pd.Series:
     return labels.fillna("missing")
 
 
-def build_clinical_feature_frame(cases: pd.DataFrame, feature_set: str) -> pd.DataFrame:
+def add_engineered_numeric_feature(clinical: pd.DataFrame, name: str, values: pd.Series) -> None:
+    clinical[f"{ENGINEERED_FEATURE_PREFIX}{name}"] = pd.to_numeric(values, errors="coerce").astype(float)
+
+
+def volume_cc(values: pd.Series) -> pd.Series:
+    return pd.to_numeric(values, errors="coerce").astype(float) / 1000.0
+
+
+def report_feature_cache_path(cache_root: Path, patient_id: str, timepoint: str) -> Path:
+    return cache_root / "report_features" / patient_id / f"{timepoint}.json"
+
+
+def compute_bidimensional_product_cm2(mask_array: np.ndarray, spacing: tuple[float, float, float]) -> float:
+    if mask_array.ndim != 3:
+        return float("nan")
+    dy_mm = float(spacing[1]) if len(spacing) > 1 else 1.0
+    dx_mm = float(spacing[0]) if len(spacing) > 0 else 1.0
+    best = 0.0
+    for slice_mask in mask_array:
+        if not slice_mask.any():
+            continue
+        coords = np.argwhere(slice_mask)
+        y_extent_mm = (coords[:, 0].max() - coords[:, 0].min() + 1) * dy_mm
+        x_extent_mm = (coords[:, 1].max() - coords[:, 1].min() + 1) * dx_mm
+        best = max(best, (y_extent_mm / 10.0) * (x_extent_mm / 10.0))
+    return float(best)
+
+
+def mean_signal_in_mask(image_array: np.ndarray, mask_array: np.ndarray) -> float:
+    voxels = image_array[mask_array]
+    if voxels.size == 0:
+        return float("nan")
+    return float(np.mean(voxels))
+
+
+def compute_report_imaging_features_for_case(
+    case: dict[str, object],
+    repo_root: Path,
+    cache_root: Path,
+) -> dict[str, float]:
+    patient_id = str(case["patient_id"])
+    timepoint = str(case["timepoint"])
+    cache_path = report_feature_cache_path(cache_root, patient_id, timepoint)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    if cache_path.exists():
+        return json.loads(cache_path.read_text(encoding="utf-8"))
+
+    mask_path = resolve_repo_path(repo_root, case["multiclass_mask_path"])
+    mask_img = sitk.ReadImage(str(mask_path), sitk.sitkUInt8)
+    mask_array = sitk.GetArrayFromImage(mask_img)
+    spacing = mask_img.GetSpacing()
+
+    et_mask = mask_array == REPORT_LABEL_MAP["et"]
+    snhf_mask = mask_array == REPORT_LABEL_MAP["snhf"]
+    rc_mask = mask_array == REPORT_LABEL_MAP["rc"]
+
+    t1_array = sitk.GetArrayFromImage(resolve_and_read_image(repo_root, case["native_t1_path"])).astype(np.float32, copy=False)
+    t1c_array = sitk.GetArrayFromImage(resolve_and_read_image(repo_root, case["native_t1c_path"])).astype(np.float32, copy=False)
+    flair_array = sitk.GetArrayFromImage(resolve_and_read_image(repo_root, case["native_flair_path"])).astype(np.float32, copy=False)
+
+    et_mean_t1 = mean_signal_in_mask(t1_array, et_mask)
+    et_mean_t1c = mean_signal_in_mask(t1c_array, et_mask)
+    flair_mean_snhf = mean_signal_in_mask(flair_array, snhf_mask)
+
+    adjacency_structure = generate_binary_structure(3, 1)
+    rc_adjacent_et_fraction = float("nan")
+    if et_mask.any():
+        rc_adjacent = binary_dilation(rc_mask, structure=adjacency_structure, iterations=1)
+        rc_adjacent_et_fraction = float(np.logical_and(et_mask, rc_adjacent).sum() / max(1, et_mask.sum()))
+
+    features = {
+        "bd_product_cm2": compute_bidimensional_product_cm2(et_mask, spacing),
+        "t1ce_t1_signal_ratio_within_et": float(et_mean_t1c / max(abs(et_mean_t1), EPS))
+        if np.isfinite(et_mean_t1c) and np.isfinite(et_mean_t1)
+        else float("nan"),
+        "rc_adjacent_et_fraction": rc_adjacent_et_fraction,
+        "mean_flair_signal_within_snhf": flair_mean_snhf,
+    }
+    cache_path.write_text(json.dumps(features, sort_keys=True), encoding="utf-8")
+    return features
+
+
+def resolve_and_read_image(repo_root: Path, value: object) -> sitk.Image:
+    return sitk.ReadImage(str(resolve_repo_path(repo_root, value)), sitk.sitkFloat32)
+
+
+def add_report_volume_features(clinical: pd.DataFrame, cases: pd.DataFrame) -> None:
+    for label_name, feature_name in (
+        ("label1_voxels", "et_volume_cc"),
+        ("label2_voxels", "netc_volume_cc"),
+        ("label3_voxels", "snhf_volume_cc"),
+        ("label4_voxels", "rc_volume_cc"),
+        ("whole_tumor_voxels", "whole_tumor_volume_cc"),
+    ):
+        if label_name in cases.columns:
+            add_engineered_numeric_feature(clinical, feature_name, volume_cc(cases[label_name]))
+
+
+def add_report_timing_features(clinical: pd.DataFrame, cases: pd.DataFrame) -> None:
+    if "days_from_diagnosis_to_mri" in cases.columns:
+        mri_days = pd.to_numeric(cases["days_from_diagnosis_to_mri"], errors="coerce")
+        add_engineered_numeric_feature(
+            clinical,
+            "days_from_diagnosis_to_current_mri",
+            mri_days.where(mri_days >= 0),
+        )
+    if "clinical_number_of_days_from_diagnosis_to_radiation_therapy_end_date" in cases.columns and "days_from_diagnosis_to_mri" in cases.columns:
+        radiation_end = pd.to_numeric(
+            cases["clinical_number_of_days_from_diagnosis_to_radiation_therapy_end_date"],
+            errors="coerce",
+        )
+        current_mri = pd.to_numeric(cases["days_from_diagnosis_to_mri"], errors="coerce")
+        days_post_rt = current_mri - radiation_end
+        days_post_rt = days_post_rt.where(days_post_rt >= 0)
+        add_engineered_numeric_feature(clinical, "days_post_radiation_therapy_end", days_post_rt)
+
+
+def add_report_imaging_features(clinical: pd.DataFrame, cases: pd.DataFrame, repo_root: Path, cache_root: Path) -> None:
+    rows: list[dict[str, object]] = []
+    for case in cases.to_dict(orient="records"):
+        payload = {
+            **{key: case[key] for key in CASE_ID_COLUMNS},
+            **compute_report_imaging_features_for_case(case, repo_root=repo_root, cache_root=cache_root),
+        }
+        rows.append(payload)
+    derived = pd.DataFrame(rows)
+    for column in [col for col in derived.columns if col not in CASE_ID_COLUMNS]:
+        clinical[f"{ENGINEERED_FEATURE_PREFIX}{column}"] = pd.to_numeric(derived[column], errors="coerce").astype(float)
+
+
+def build_clinical_feature_frame(
+    cases: pd.DataFrame,
+    feature_set: str,
+    repo_root: Path,
+    cache_root: Path,
+) -> pd.DataFrame:
     clinical = cases[list(CASE_ID_COLUMNS)].copy()
     if feature_set == "none":
         return clinical
 
     frames: list[pd.DataFrame] = []
-    if feature_set == "hybrid_basic" and "clinical_age_at_diagnosis" in cases.columns:
+    include_basic = feature_set in {
+        "hybrid_basic",
+        "hybrid_engineered",
+        "hybrid_engineered_biologic",
+        "report_core",
+        "report_timing",
+        "report_full",
+    }
+    include_engineered = feature_set in {"hybrid_engineered", "hybrid_engineered_biologic"}
+    include_timing_engineering = feature_set == "hybrid_engineered"
+    include_report_core = feature_set in {"report_core", "report_timing", "report_full"}
+    include_report_timing = feature_set in {"report_timing", "report_full"}
+    include_report_full = feature_set == "report_full"
+
+    if include_basic and "clinical_age_at_diagnosis" in cases.columns:
         age = pd.to_numeric(cases["clinical_age_at_diagnosis"], errors="coerce")
         clinical[f"{CLINICAL_FEATURE_PREFIX}age_at_diagnosis"] = age.astype(float)
-    if feature_set == "hybrid_basic" and "clinical_sex_at_birth" in cases.columns:
+    if include_basic and "clinical_sex_at_birth" in cases.columns:
         sex = clean_categorical_codes(cases["clinical_sex_at_birth"])
         frames.append(
             pd.get_dummies(
@@ -420,6 +592,76 @@ def build_clinical_feature_frame(cases: pd.DataFrame, feature_set: str) -> pd.Da
                 dtype=float,
             )
         )
+
+    if include_engineered:
+        union_voxels = (
+            pd.to_numeric(cases["union_voxels"], errors="coerce")
+            if "union_voxels" in cases.columns
+            else pd.Series(np.nan, index=cases.index, dtype=float)
+        )
+        if union_voxels.notna().any():
+            add_engineered_numeric_feature(clinical, "log_union_voxels", np.log1p(union_voxels.clip(lower=0)))
+            add_engineered_numeric_feature(clinical, "sqrt_union_voxels", np.sqrt(union_voxels.clip(lower=0)))
+
+        whole_tumor = (
+            pd.to_numeric(cases["whole_tumor_voxels"], errors="coerce")
+            if "whole_tumor_voxels" in cases.columns
+            else pd.Series(np.nan, index=cases.index, dtype=float)
+        )
+        if whole_tumor.notna().any():
+            add_engineered_numeric_feature(clinical, "log_whole_tumor_voxels", np.log1p(whole_tumor.clip(lower=0)))
+
+        denom = union_voxels.replace(0, np.nan)
+        for label_name, suffix in (
+            ("label1_voxels", "label1_fraction"),
+            ("label2_voxels", "label2_fraction"),
+            ("label3_voxels", "label3_fraction"),
+        ):
+            if label_name not in cases.columns:
+                continue
+            label_values = pd.to_numeric(cases[label_name], errors="coerce")
+            add_engineered_numeric_feature(clinical, suffix, label_values / denom)
+            add_engineered_numeric_feature(clinical, f"log_{label_name}", np.log1p(label_values.clip(lower=0)))
+
+        if include_timing_engineering and "days_from_diagnosis_to_mri" in cases.columns:
+            mri_days = pd.to_numeric(cases["days_from_diagnosis_to_mri"], errors="coerce")
+            add_engineered_numeric_feature(clinical, "log_days_from_diagnosis_to_mri", np.log1p(mri_days.clip(lower=0)))
+
+        if include_timing_engineering and "timepoint_number" in cases.columns:
+            add_engineered_numeric_feature(clinical, "timepoint_number", cases["timepoint_number"])
+
+        for column in ENGINEERED_CATEGORICAL_COLUMNS:
+            if column not in cases.columns:
+                continue
+            encoded = clean_categorical_codes(cases[column])
+            short_name = column.removeprefix("clinical_")
+            frames.append(
+                pd.get_dummies(
+                    encoded,
+                    prefix=f"{CLINICAL_FEATURE_PREFIX}{short_name}",
+                    prefix_sep="__",
+                    dtype=float,
+                )
+            )
+
+    if include_report_core:
+        add_report_volume_features(clinical, cases)
+        if "clinical_grade_of_primary_brain_tumor" in cases.columns:
+            grade = clean_categorical_codes(cases["clinical_grade_of_primary_brain_tumor"])
+            frames.append(
+                pd.get_dummies(
+                    grade,
+                    prefix=f"{CLINICAL_FEATURE_PREFIX}grade_of_primary_brain_tumor",
+                    prefix_sep="__",
+                    dtype=float,
+                )
+            )
+
+    if include_report_timing:
+        add_report_timing_features(clinical, cases)
+
+    if include_report_full:
+        add_report_imaging_features(clinical, cases, repo_root=repo_root, cache_root=cache_root)
 
     for column in MOLECULAR_FEATURE_COLUMNS:
         if column not in cases.columns:
@@ -1530,6 +1772,7 @@ def write_markdown_summary(output_path: Path, summary: dict[str, object]) -> Non
         f"- Raw Brier: `{summary['test_brier_raw']:.4f}`",
         f"- Calibrated Brier: `{summary['test_brier_calibrated']:.4f}`",
         f"- Threshold: `{summary['threshold']:.4f}`",
+        "- Primary per-case output: `progression_risk_probability` in `test_predictions.csv`",
         f"- Confusion matrix (TN / FP / FN / TP): `{summary['test_metrics_calibrated']['tn']}` / `{summary['test_metrics_calibrated']['fp']}` / `{summary['test_metrics_calibrated']['fn']}` / `{summary['test_metrics_calibrated']['tp']}`",
     ]
     if summary.get("auc_ci_low") is not None and summary.get("auc_ci_high") is not None:
