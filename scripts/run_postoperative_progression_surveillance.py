@@ -25,9 +25,9 @@ import optuna
 import pandas as pd
 import shap
 import SimpleITK as sitk
-from scipy.ndimage import binary_dilation, generate_binary_structure
 from lightgbm import LGBMClassifier
 from radiomics import featureextractor, logger as radiomics_logger
+from radiomics_tools.report_metrics import CaseMetricPaths, compute_case_report_metrics_from_paths
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LogisticRegression
@@ -100,12 +100,6 @@ ENGINEERED_CATEGORICAL_COLUMNS = (
     "clinical_previous_brain_tumor",
     "clinical_grade_of_previous_brain_tumor",
 )
-REPORT_LABEL_MAP = {
-    "et": 1,
-    "netc": 2,
-    "snhf": 3,
-    "rc": 4,
-}
 
 
 @dataclass
@@ -436,29 +430,6 @@ def report_feature_cache_path(cache_root: Path, patient_id: str, timepoint: str)
     return cache_root / "report_features" / patient_id / f"{timepoint}.json"
 
 
-def compute_bidimensional_product_cm2(mask_array: np.ndarray, spacing: tuple[float, float, float]) -> float:
-    if mask_array.ndim != 3:
-        return float("nan")
-    dy_mm = float(spacing[1]) if len(spacing) > 1 else 1.0
-    dx_mm = float(spacing[0]) if len(spacing) > 0 else 1.0
-    best = 0.0
-    for slice_mask in mask_array:
-        if not slice_mask.any():
-            continue
-        coords = np.argwhere(slice_mask)
-        y_extent_mm = (coords[:, 0].max() - coords[:, 0].min() + 1) * dy_mm
-        x_extent_mm = (coords[:, 1].max() - coords[:, 1].min() + 1) * dx_mm
-        best = max(best, (y_extent_mm / 10.0) * (x_extent_mm / 10.0))
-    return float(best)
-
-
-def mean_signal_in_mask(image_array: np.ndarray, mask_array: np.ndarray) -> float:
-    voxels = image_array[mask_array]
-    if voxels.size == 0:
-        return float("nan")
-    return float(np.mean(voxels))
-
-
 def compute_report_imaging_features_for_case(
     case: dict[str, object],
     repo_root: Path,
@@ -471,44 +442,23 @@ def compute_report_imaging_features_for_case(
     if cache_path.exists():
         return json.loads(cache_path.read_text(encoding="utf-8"))
 
-    mask_path = resolve_repo_path(repo_root, case["multiclass_mask_path"])
-    mask_img = sitk.ReadImage(str(mask_path), sitk.sitkUInt8)
-    mask_array = sitk.GetArrayFromImage(mask_img)
-    spacing = mask_img.GetSpacing()
-
-    et_mask = mask_array == REPORT_LABEL_MAP["et"]
-    snhf_mask = mask_array == REPORT_LABEL_MAP["snhf"]
-    rc_mask = mask_array == REPORT_LABEL_MAP["rc"]
-
-    t1_array = sitk.GetArrayFromImage(resolve_and_read_image(repo_root, case["native_t1_path"])).astype(np.float32, copy=False)
-    t1c_array = sitk.GetArrayFromImage(resolve_and_read_image(repo_root, case["native_t1c_path"])).astype(np.float32, copy=False)
-    flair_array = sitk.GetArrayFromImage(resolve_and_read_image(repo_root, case["native_flair_path"])).astype(np.float32, copy=False)
-
-    et_mean_t1 = mean_signal_in_mask(t1_array, et_mask)
-    et_mean_t1c = mean_signal_in_mask(t1c_array, et_mask)
-    flair_mean_snhf = mean_signal_in_mask(flair_array, snhf_mask)
-
-    adjacency_structure = generate_binary_structure(3, 1)
-    rc_adjacent_et_fraction = float("nan")
-    if et_mask.any():
-        rc_adjacent = binary_dilation(rc_mask, structure=adjacency_structure, iterations=1)
-        rc_adjacent_et_fraction = float(np.logical_and(et_mask, rc_adjacent).sum() / max(1, et_mask.sum()))
+    metrics = compute_case_report_metrics_from_paths(
+        CaseMetricPaths(
+            mask_path=resolve_repo_path(repo_root, case["multiclass_mask_path"]),
+            t1_path=resolve_repo_path(repo_root, case["native_t1_path"]),
+            t1ce_path=resolve_repo_path(repo_root, case["native_t1c_path"]),
+            flair_path=resolve_repo_path(repo_root, case["native_flair_path"]),
+        )
+    )
 
     features = {
-        "bd_product_cm2": compute_bidimensional_product_cm2(et_mask, spacing),
-        "t1ce_t1_signal_ratio_within_et": float(et_mean_t1c / max(abs(et_mean_t1), EPS))
-        if np.isfinite(et_mean_t1c) and np.isfinite(et_mean_t1)
-        else float("nan"),
-        "rc_adjacent_et_fraction": rc_adjacent_et_fraction,
-        "mean_flair_signal_within_snhf": flair_mean_snhf,
+        "bd_product_cm2": metrics["bidimensional_product_cm2"],
+        "t1ce_t1_signal_ratio_within_et": metrics["t1ce_to_t1_intensity_ratio_within_et"],
+        "rc_adjacent_et_fraction": metrics["rc_adjacent_et_fraction"],
+        "mean_flair_signal_within_snhf": metrics["mean_flair_intensity_within_snhf"],
     }
     cache_path.write_text(json.dumps(features, sort_keys=True), encoding="utf-8")
     return features
-
-
-def resolve_and_read_image(repo_root: Path, value: object) -> sitk.Image:
-    return sitk.ReadImage(str(resolve_repo_path(repo_root, value)), sitk.sitkFloat32)
-
 
 def add_report_volume_features(clinical: pd.DataFrame, cases: pd.DataFrame) -> None:
     for label_name, feature_name in (
