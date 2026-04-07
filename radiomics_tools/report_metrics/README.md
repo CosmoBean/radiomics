@@ -45,6 +45,53 @@ The utilities assume the MU-Glioma-Post multiclass segmentation labels already u
 - `case.py`
   - one-shot wrappers that return all report metrics for a case
 
+## Quick Calculation Summaries
+
+### Enhancing tumor (ET) volume
+
+Calculated by counting all voxels labeled `1` in the multiclass segmentation mask.  
+That voxel count is multiplied by voxel volume from image spacing and converted to `cm^3`.
+
+### Non-enhancing tumor core (NETC) volume
+
+Calculated by counting all voxels labeled `2` in the multiclass segmentation mask.  
+The count is converted to physical volume using voxel spacing and reported in `cm^3`.
+
+### SNFH volume
+
+Calculated by counting all voxels labeled `3`, corresponding to surrounding non-enhancing FLAIR hyperintensity.  
+That count is converted from voxel space to `cm^3` using the image spacing.
+
+### RC volume
+
+Calculated by counting all voxels labeled `4`, corresponding to the resection cavity.  
+The voxel count is converted to `cm^3` using the voxel dimensions from the mask image.
+
+### Whole tumor volume
+
+Calculated as the union of all tumor-related labels `1/2/3/4` in the multiclass mask.  
+All positive tumor-compartment voxels are summed and converted to `cm^3`.
+
+### Bidimensional product (2D tumor size)
+
+Calculated on the enhancing tumor mask by scanning slices and finding the largest in-plane extent.  
+For each slice, height × width is measured in physical units, and the maximum product is reported in `cm^2`.
+
+### T1CE-to-T1 intensity ratio (within ET)
+
+Calculated by taking the mean T1CE intensity inside the ET region and dividing it by the mean T1 intensity inside the same ET region.  
+This gives a relative enhancement measure restricted to the enhancing tumor compartment.
+
+### RC-adjacent ET fraction
+
+Calculated by dilating the RC mask by one voxel and checking how much ET overlaps that neighborhood.  
+The result is the fraction of ET voxels that directly border the resection cavity, on a `0` to `1` scale.
+
+### Mean FLAIR intensity (within SNFH)
+
+Calculated by taking all FLAIR voxels inside the SNFH compartment and computing their mean intensity.  
+This summarizes the average FLAIR signal within the peri-tumoral hyperintense region.
+
 ## Metric Functions
 
 ### Tumor compartment volumes
