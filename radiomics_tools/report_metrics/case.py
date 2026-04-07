@@ -7,14 +7,16 @@ from pathlib import Path
 
 import numpy as np
 
-from .geometry import enhancing_tumor_bidimensional_product_cm2
-from .intensity import (
-    mean_flair_intensity_within_snhf,
-    rc_adjacent_et_fraction,
-    t1ce_to_t1_intensity_ratio_within_et,
-)
+from .bidimensional_product import enhancing_tumor_bidimensional_product_cm2
+from .enhancing_tumor_volume import enhancing_tumor_volume_cc
 from .io import load_case_data
-from .volumes import tumor_compartment_volumes_cc
+from .mean_flair_intensity_within_snhf import mean_flair_intensity_within_snhf
+from .non_enhancing_tumor_core_volume import non_enhancing_tumor_core_volume_cc
+from .rc_adjacent_et_fraction import rc_adjacent_et_fraction
+from .resection_cavity_volume import resection_cavity_volume_cc
+from .snhf_volume import snhf_volume_cc
+from .t1ce_to_t1_intensity_ratio_within_et import t1ce_to_t1_intensity_ratio_within_et
+from .whole_tumor_volume import whole_tumor_volume_cc
 
 
 @dataclass(frozen=True)
@@ -33,7 +35,13 @@ def compute_case_report_metrics(
     t1ce_array: np.ndarray | None = None,
     flair_array: np.ndarray | None = None,
 ) -> dict[str, float]:
-    metrics = tumor_compartment_volumes_cc(mask_array, spacing)
+    metrics = {
+        "enhancing_tumor_volume_cc": enhancing_tumor_volume_cc(mask_array, spacing),
+        "non_enhancing_tumor_core_volume_cc": non_enhancing_tumor_core_volume_cc(mask_array, spacing),
+        "snhf_volume_cc": snhf_volume_cc(mask_array, spacing),
+        "resection_cavity_volume_cc": resection_cavity_volume_cc(mask_array, spacing),
+        "whole_tumor_volume_cc": whole_tumor_volume_cc(mask_array, spacing),
+    }
     metrics["bidimensional_product_cm2"] = enhancing_tumor_bidimensional_product_cm2(mask_array, spacing)
     metrics["rc_adjacent_et_fraction"] = rc_adjacent_et_fraction(mask_array)
     metrics["t1ce_to_t1_intensity_ratio_within_et"] = float("nan")

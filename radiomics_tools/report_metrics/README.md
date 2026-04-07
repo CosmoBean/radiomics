@@ -11,14 +11,35 @@ The utilities assume the MU-Glioma-Post multiclass segmentation labels already u
 - `3`: surrounding non-enhancing FLAIR hyperintensity (`SNFH`)
 - `4`: resection cavity (`RC`)
 
-## Files
+## Metric Files
+
+- `enhancing_tumor_volume.py`
+  - ET volume
+- `non_enhancing_tumor_core_volume.py`
+  - NETC volume
+- `snhf_volume.py`
+  - SNFH volume
+- `resection_cavity_volume.py`
+  - RC volume
+- `whole_tumor_volume.py`
+  - whole-tumor volume
+- `bidimensional_product.py`
+  - ET bidimensional product
+- `t1ce_to_t1_intensity_ratio_within_et.py`
+  - ET-restricted T1CE:T1 signal ratio
+- `rc_adjacent_et_fraction.py`
+  - RC-adjacent ET fraction
+- `mean_flair_intensity_within_snhf.py`
+  - SNFH-restricted mean FLAIR intensity
+
+## Support Files
 
 - `volumes.py`
-  - compartment voxel counting and volume conversion helpers
+  - shared compartment volume helpers
 - `geometry.py`
-  - bidimensional tumor burden helpers
+  - shared bidimensional geometry helpers
 - `intensity.py`
-  - signal ratio, adjacency, and compartment-intensity helpers
+  - shared intensity and adjacency helpers
 - `io.py`
   - NIfTI loading helpers for tool calls
 - `case.py`
@@ -29,39 +50,46 @@ The utilities assume the MU-Glioma-Post multiclass segmentation labels already u
 ### Tumor compartment volumes
 
 - `enhancing_tumor_volume_cc(mask_array, spacing)`
-  - volume of label `1`
+  - file: `enhancing_tumor_volume.py`
+  - definition: volume of label `1`
   - units: cubic centimeters
 - `non_enhancing_tumor_core_volume_cc(mask_array, spacing)`
-  - volume of label `2`
+  - file: `non_enhancing_tumor_core_volume.py`
+  - definition: volume of label `2`
   - units: cubic centimeters
 - `snhf_volume_cc(mask_array, spacing)`
-  - volume of label `3`
+  - file: `snhf_volume.py`
+  - definition: volume of label `3`
   - units: cubic centimeters
 - `resection_cavity_volume_cc(mask_array, spacing)`
-  - volume of label `4`
+  - file: `resection_cavity_volume.py`
+  - definition: volume of label `4`
   - units: cubic centimeters
 - `whole_tumor_volume_cc(mask_array, spacing)`
-  - union volume across labels `1/2/3/4`
+  - file: `whole_tumor_volume.py`
+  - definition: union volume across labels `1/2/3/4`
   - units: cubic centimeters
 - `tumor_compartment_volumes_cc(mask_array, spacing)`
   - returns all five volume metrics in one dictionary
 
 ### Size and burden
 
-- `bidimensional_product_cm2(mask_array, spacing, labels=(1,))`
-  - maximum in-plane bidimensional product across slices for the selected labels
-  - units: square centimeters
 - `enhancing_tumor_bidimensional_product_cm2(mask_array, spacing)`
-  - ET-specific wrapper used by the current surveillance pipeline
+  - file: `bidimensional_product.py`
+  - definition: maximum in-plane ET bidimensional product across slices
+  - units: square centimeters
 
 ### Spatial and intensity relationships
 
 - `t1ce_to_t1_intensity_ratio_within_et(t1_array, t1ce_array, mask_array)`
-  - mean `T1CE` intensity inside `ET` divided by mean `T1` intensity inside `ET`
+  - file: `t1ce_to_t1_intensity_ratio_within_et.py`
+  - definition: mean `T1CE` intensity inside `ET` divided by mean `T1` intensity inside `ET`
 - `rc_adjacent_et_fraction(mask_array, iterations=1, connectivity=1)`
+  - file: `rc_adjacent_et_fraction.py`
   - fraction of `ET` voxels touching the one-voxel dilation of `RC`
   - range: `0` to `1`
 - `mean_flair_intensity_within_snhf(flair_array, mask_array)`
+  - file: `mean_flair_intensity_within_snhf.py`
   - mean `FLAIR` intensity inside `SNFH`
 - `mean_intensity_for_labels(image_array, mask_array, labels)`
   - generic compartment mean-intensity helper used by the signal functions
