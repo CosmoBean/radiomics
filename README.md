@@ -52,3 +52,5 @@ The core pipeline is implemented in [scripts/run_postoperative_progression_surve
 
 - This repository contains code and documentation, not the raw TCIA data.
 - The recommended direction is the forward hybrid model: `T1c + FLAIR` radiomics plus curated molecular/basic clinical features.
+- Report-style tool-call utilities live under [radiomics_tools/report_metrics](radiomics_tools/report_metrics/README.md).
+- Concise calculation summaries for ET, NETC, SNFH, RC, whole-tumor, bidimensional, and intensity metrics are documented in [radiomics_tools/report_metrics/README.md](radiomics_tools/report_metrics/README.md).
