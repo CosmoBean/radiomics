@@ -6,7 +6,22 @@ This report summarizes the postoperative glioma surveillance modeling work in th
 
 The work started as a reproduction effort and became a structured improvement effort. The sequence of decisions was consistent throughout: build a native pipeline around the MU-Glioma-Post dataset, keep the evaluation patient-safe, move from a looser progression-state task to a cleaner forward-prediction task, reduce the imaging backbone to the modalities that carried the most signal, and then add a compact set of biologically meaningful clinical variables.
 
-The most important objective result is that the strongest observed corrected forward split in this repository is a calibrated logistic regression model using `T1c + FLAIR` radiomics plus a small molecular/basic clinical block, with held-out ROC AUC `0.8043` on the `seed_62` corrected forward split.
+The most important objective result is that the strongest observed corrected forward split in this repository is a calibrated logistic regression model using `T1c + FLAIR` radiomics plus a small leakage-screened molecular/basic clinical block, with held-out ROC AUC `0.8043` on the `seed_62` corrected forward split.
+
+## Summary Figures
+
+The two main curves used in this report are:
+
+- ROC curve: `results/roc_curve.png`
+- Decision curve: `results/decision_curve.png`
+
+![ROC Curve](../results/roc_curve.png)
+
+*Summary figure A. Held-out ROC curve for the corrected forward run.*
+
+![Decision Curve](../results/decision_curve.png)
+
+*Summary figure B. Held-out decision-curve analysis for the corrected forward run.*
 
 ## Literature And Internal Comparison
 
@@ -72,9 +87,27 @@ The all-modality radiomics baseline did not behave as well as expected. SHAP ana
 
 In this problem, the dimensionality is high and the sample size is modest. Logistic regression was repeatedly more stable than more aggressively flexible alternatives on held-out evaluation. The final peak corrected forward result is therefore a calibrated logistic regression model.
 
-### 6. Add curated molecular and basic clinical covariates
+### 6. Add leakage-screened molecular and basic clinical covariates
 
-The strongest gain came from adding a compact clinical block rather than continuing to push radiomics-only modeling. The hybrid branch used age, sex, and a curated set of molecular markers already present in the dataset. These were merged at the scan level without using future information.
+The strongest gain came from adding a compact clinical block rather than continuing to push radiomics-only modeling. In this project, "curation" did not mean manual re-annotation or biological reinterpretation. It meant selecting a small set of existing clinical columns from the dataset that were available at or before scan time, reviewing them for obvious leakage risk, and excluding columns that directly encoded progression timing, later treatment trajectory, survival, or other post-outcome information.
+
+The retained block consisted of:
+
+- age at diagnosis
+- sex at birth
+- IDH1
+- IDH2
+- 1p/19q
+- ATRX
+- MGMT
+- TERT promoter mutation
+- EGFR amplification
+- PTEN
+- CDKN2A/B deletion
+- TP53 alteration
+- chromosome 7 gain / chromosome 10 loss
+
+These variables were already present in the merged dataset, one-hot encoded when needed, and merged into the scan-level feature table without using future information. So the "curation" step was a leakage-screening and column-selection step, not a manual molecular relabeling step.
 
 ### 7. Add interpretable report-oriented engineered features
 
@@ -291,7 +324,7 @@ Objectively, the repository achieved the following:
 3. The early radiomics-only replication did not recover the literature-level result, which motivated a better-defined forward-prediction task.
 4. A forward-prediction formulation was implemented using pre-progression scans and exclusion of post-late-treatment scans.
 5. SHAP analysis identified `T1c` and `FLAIR` as the strongest imaging backbone.
-6. A hybrid radiomics-clinical branch materially outperformed the radiomics-only forward baseline.
+6. A hybrid radiomics-clinical branch using a leakage-screened molecular/basic clinical block materially outperformed the radiomics-only forward baseline.
 7. The best observed corrected forward split reached held-out ROC AUC `0.8043`.
 8. The held-out calibrated test AUCPRC was `0.5894`, substantially above the held-out prevalence baseline of `0.2619`.
 9. The model was exported in a probability-first form with `progression_risk_probability`.
@@ -301,6 +334,6 @@ Objectively, the repository achieved the following:
 
 The project began as a reproduction of postoperative progression-surveillance radiomics and became a careful improvement study. The main literature comparator was Christodoulou et al. The main internal comparisons were between radiomics-only baselines, paper-style hybrid variants, forward-prediction radiomics runs, forward-prediction hybrid runs, and the report-feature branch.
 
-The clearest result is that the best direction in this repository is not the original all-modality radiomics-only setup. The strongest observed model is a calibrated logistic regression model using `T1c + FLAIR` radiomics plus a small set of molecular/basic clinical covariates. On the best corrected forward split, it achieved held-out ROC AUC `0.8043`, AUCPRC `0.5894`, balanced accuracy `0.7243`, macro F1 `0.7375`, macro recall `0.7243`, Brier score `0.1542`, and Matthews correlation coefficient `0.4808`.
+The clearest result is that the best direction in this repository is not the original all-modality radiomics-only setup. The strongest observed model is a calibrated logistic regression model using `T1c + FLAIR` radiomics plus a small set of leakage-screened molecular/basic clinical covariates. On the best corrected forward split, it achieved held-out ROC AUC `0.8043`, AUCPRC `0.5894`, balanced accuracy `0.7243`, macro F1 `0.7375`, macro recall `0.7243`, Brier score `0.1542`, and Matthews correlation coefficient `0.4808`.
 
 The SHAP analyses explain why this direction worked. The baseline SHAP outputs pushed the project toward `T1c + FLAIR`, and the peak-model SHAP outputs confirmed that `T1c` remained the dominant signal source, with `FLAIR` adding meaningful complementary structure and the clinical branch contributing a smaller biologic context. The engineered report features improved coherence and interpretability and are now available in the pipeline, but they did not replace the lean hybrid branch as the best-performing model family in the current experiments.
