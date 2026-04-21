@@ -12,14 +12,14 @@ The most important objective result is that the strongest observed corrected for
 
 The two main curves used in this report are:
 
-- ROC curve: `results/roc_curve.png`
-- Decision curve: `results/decision_curve.png`
+- ROC curve: `reports/figures/roc_curve.png`
+- Decision curve: `reports/figures/decision_curve.png`
 
-![ROC Curve](../results/roc_curve.png)
+![ROC Curve](figures/roc_curve.png)
 
 *Summary figure A. Held-out ROC curve for the corrected forward run.*
 
-![Decision Curve](../results/decision_curve.png)
+![Decision Curve](figures/decision_curve.png)
 
 *Summary figure B. Held-out decision-curve analysis for the corrected forward run.*
 
@@ -203,13 +203,13 @@ The main effect of calibration and thresholding in the exported model is a more 
 
 ### ROC curve
 
-![ROC Curve](../results/roc_curve.png)
+![ROC Curve](figures/roc_curve.png)
 
 *Figure 1. Held-out ROC curve for the corrected forward run. The calibrated model achieved ROC AUC `0.8043`, with a bootstrap 95% confidence interval of `[0.6823, 0.9012]`.*
 
 ### Decision curve
 
-![Decision Curve](../results/decision_curve.png)
+![Decision Curve](figures/decision_curve.png)
 
 *Figure 2. Decision-curve analysis for the corrected forward run. In the stored decision-curve file, the model shows higher net benefit than both treat-all and treat-none from approximately threshold `0.10` through `0.59`.*
 
