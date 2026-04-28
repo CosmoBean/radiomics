@@ -48,9 +48,12 @@ The core pipeline is implemented in [scripts/run_postoperative_progression_surve
 - Mahmoud E, Gass J, Dhemesh Y, et al. *MU-Glioma Post: A comprehensive dataset of automated MR multi-sequence segmentation and clinical features*. Scientific Data. 2025;12:1847. doi: [10.1038/s41597-025-06011-7](https://doi.org/10.1038/s41597-025-06011-7)
 - Yaseen D, Garrett F, Gass J, et al. *University of Missouri Post-operative Glioma Dataset (MU-Glioma-Post) (Version 1)*. The Cancer Imaging Archive. 2025. doi: [10.7937/7K9K-3C83](https://doi.org/10.7937/7K9K-3C83)
 
-## Notes
+## Layout
 
-- This repository contains code and documentation, not the raw TCIA data.
-- The recommended direction is the forward hybrid model: `T1c + FLAIR` radiomics plus curated molecular/basic clinical features.
-- Report-style tool-call utilities live under [radiomics_tools/report_metrics](radiomics_tools/report_metrics/README.md).
-- Concise calculation summaries for ET, NETC, SNFH, RC, whole-tumor, bidimensional, and intensity metrics are documented in [radiomics_tools/report_metrics/README.md](radiomics_tools/report_metrics/README.md).
+- `scripts/` contains the preprocessing, training, and export entrypoints.
+- `radiomics_tools/metrics/` contains the reusable engineered metric helpers.
+- `models/peak_forward/` contains the exported probability-capable bundle.
+- `configs/` contains the PyRadiomics configuration.
+- `tests/` contains the metric unit tests.
+
+This repository contains code and the retained model artifacts, not the raw TCIA data. The recommended direction is the forward hybrid model: `T1c + FLAIR` radiomics plus curated molecular/basic clinical features.
