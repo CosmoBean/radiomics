@@ -27,7 +27,7 @@ import shap
 import SimpleITK as sitk
 from lightgbm import LGBMClassifier
 from radiomics import featureextractor, logger as radiomics_logger
-from radiomics_tools.report_metrics import CaseMetricPaths, compute_case_report_metrics_from_paths
+from radiomics_tools.metrics import CaseMetricPaths, compute_case_report_metrics_from_paths
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LogisticRegression
