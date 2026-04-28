@@ -32,7 +32,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=REPO_ROOT / "model" / "peak_forward_seed62",
+        default=REPO_ROOT / "models" / "peak_forward",
         help="Directory where the exported bundle and metadata should be written.",
     )
     parser.add_argument(
@@ -221,7 +221,7 @@ def export_bundle(
         "",
         "```python",
         "import pickle",
-        "bundle = pickle.load(open('model/peak_forward_seed62/model_bundle.pkl', 'rb'))",
+        "bundle = pickle.load(open('models/peak_forward/model_bundle.pkl', 'rb'))",
         "```",
         "",
         "Use `bundle['classifier']` on preprocessed features for raw probabilities, then pass them through",
