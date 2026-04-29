@@ -16,10 +16,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from radiomics_tools.workflows import train as surv
+from radiomics_pipeline.workflows import train as surv
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Export the calibrated surveillance model bundle from an existing result directory."
     )
@@ -47,7 +47,7 @@ def parse_args() -> argparse.Namespace:
         default=5,
         help="CV folds used when refitting the calibration stack.",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def load_inputs(result_dir: Path) -> tuple[dict[str, object], pd.DataFrame, set[str], set[str]]:
@@ -202,8 +202,8 @@ def export_bundle(
     return metadata, shap_df
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
     summary, features, test_patients, _ = load_inputs(args.result_dir)
     export_bundle(
         summary=summary,

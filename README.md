@@ -12,7 +12,7 @@ The goals were:
 
 ## Process
 
-The core pipeline is implemented in [radiomics_tools/workflows/train.py](radiomics_tools/workflows/train.py).
+The main entrypoint is [main.py](main.py), and the model-training loader lives in [radiomics_pipeline/training/dataloader.py](radiomics_pipeline/training/dataloader.py).
 
 1. audited and indexed the longitudinal postoperative MRI dataset
 2. built lesion masks from labels `1/2/3` and excluded resection-cavity-only regions
@@ -52,8 +52,10 @@ The core pipeline is implemented in [radiomics_tools/workflows/train.py](radiomi
 
 - `scripts/prep-data.sh` builds the manifests and processed inputs.
 - `scripts/run.sh` runs the calibrated forward hybrid training flow in one go.
+- `main.py` is the top-level CLI entrypoint.
 - `radiomics_tools/metrics/` contains the reusable engineered metric helpers.
-- `radiomics_tools/workflows/` contains the Python workflow code behind the shell wrappers.
+- `radiomics_pipeline/training/` contains the model-side data loading helpers.
+- `radiomics_pipeline/workflows/` contains the Python workflow code behind the shell wrappers.
 - `models/calibrated/` contains the exported calibrated bundle.
 - `configs/` contains the PyRadiomics configuration.
 - `tests/` contains the metric unit tests.

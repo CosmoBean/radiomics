@@ -30,7 +30,7 @@ class ParsedPath:
     is_mask: bool
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Build manifest and consistency reports for MU-Glioma-Post."
     )
@@ -52,7 +52,7 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Reuse an existing manifest CSV and rebuild only the summary reports.",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def format_sequence(values: Iterable[object], precision: int = 6) -> str:
@@ -401,8 +401,8 @@ def build_outputs(dataset_root: Path, output_dir: Path, manifest_csv: Path | Non
     print(f"Wrote {output_dir / 'missingness_report.csv'}")
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
     manifest_csv = args.manifest_csv.resolve() if args.manifest_csv else None
     build_outputs(args.dataset_root.resolve(), args.output_dir.resolve(), manifest_csv=manifest_csv)
 

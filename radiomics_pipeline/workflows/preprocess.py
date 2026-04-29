@@ -39,7 +39,7 @@ class NormalizedVolume:
     foreground_voxels: int
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Create normalized full-volume and tumor-ROI outputs for MU-Glioma-Post."
     )
@@ -97,7 +97,7 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional limit for testing a subset of timepoints.",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def repo_relative(path: Path, repo_root: Path) -> str:
@@ -371,8 +371,8 @@ def process_case(
     return normalized_rows, case_row, status_row, mask_manifest
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
     repo_root = Path.cwd().resolve()
     dataset_root = args.dataset_root.resolve()
     output_root = args.output_root.resolve()

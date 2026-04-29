@@ -28,6 +28,7 @@ import SimpleITK as sitk
 from lightgbm import LGBMClassifier
 from radiomics import featureextractor, logger as radiomics_logger
 from radiomics_tools.metrics import CaseMetricPaths, compute_case_report_metrics_from_paths
+from radiomics_pipeline.training.dataloader import load_training_tables
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LogisticRegression
@@ -113,7 +114,7 @@ class PreprocessorState:
     corr_threshold: float
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run the postoperative progression-surveillance radiomics pipeline on MU-Glioma-Post."
     )
@@ -312,7 +313,7 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional cap on the number of labeled cases, for smoke testing.",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def write_json(path: Path, payload: dict[str, object]) -> None:
@@ -1740,16 +1741,18 @@ def write_summary_text(output_path: Path, summary: dict[str, object]) -> None:
     write_text(output_path, "\n".join(lines) + "\n")
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
     warnings.filterwarnings("ignore")
     radiomics_logger.setLevel(logging.ERROR)
     args.modalities = parse_modalities(args.modalities)
     validate_args(args)
 
+    args.experiment_index = args.experiment_index.resolve()
     args.repo_root = args.repo_root.resolve()
     args.cache_root = args.cache_root.resolve()
     args.output_dir = args.output_dir.resolve()
+    args.radiomics_yaml = args.radiomics_yaml.resolve()
     if args.feature_table is not None:
         args.feature_table = args.feature_table.resolve()
     if args.test_patients_file is not None:
@@ -1757,7 +1760,8 @@ def main() -> None:
     args.output_dir.mkdir(parents=True, exist_ok=True)
     args.cache_root.mkdir(parents=True, exist_ok=True)
 
-    index_df = pd.read_csv(args.experiment_index)
+    tables = load_training_tables(args.experiment_index, args.feature_table)
+    index_df = tables.experiment_index
     cases = build_case_table(index_df, args)
     cohort_summary = {
         "cases": int(len(cases)),
@@ -1778,8 +1782,8 @@ def main() -> None:
     )
 
     feature_csv = args.output_dir / "radiomics_features.csv"
-    if args.feature_table is not None:
-        reusable = pd.read_csv(args.feature_table)
+    if tables.feature_table is not None:
+        reusable = tables.feature_table
         metadata = case_metadata_frame(cases)
         predictor_columns = [
             column

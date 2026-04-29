@@ -15,7 +15,7 @@ import pandas as pd
 ROI_MODALITIES = ("t1", "t1c", "flair", "t2")
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Build merged clinical/imaging indices for MU-Glioma-Post."
     )
@@ -37,7 +37,7 @@ def parse_args() -> argparse.Namespace:
         default=Path("processed/manifests"),
         help="Directory where merged indices will be written.",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def snake_case(value: str) -> str:
@@ -93,8 +93,8 @@ def compute_label_voxel_counts(mask_manifest: pd.DataFrame, repo_root: Path) -> 
     return pd.DataFrame(rows)
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
     repo_root = Path.cwd().resolve()
     processed_root = args.processed_root.resolve()
     output_dir = args.output_dir.resolve()
