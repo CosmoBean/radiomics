@@ -61,7 +61,7 @@ The main entrypoint is [main.py](main.py), and the model-training loader lives i
 - `configs/` contains the PyRadiomics configuration.
 - `tests/` contains the metric unit tests.
 
-This repository contains code and the retained model artifacts, not the raw TCIA data. The recommended direction is the calibrated forward hybrid logistic-regression model: `T1c + FLAIR` radiomics plus curated molecular/basic clinical features.
+This repository contains code and the retained model artifacts, not the raw TCIA data. Processed derivatives are available at [Hugging Face](https://huggingface.co/datasets/sbandred/mu-glioma-post-processed/tree/main). The recommended direction is the calibrated forward hybrid logistic-regression model: `T1c + FLAIR` radiomics plus curated molecular/basic clinical features.
 
 ## Environment
 
