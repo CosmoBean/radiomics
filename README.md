@@ -52,6 +52,7 @@ The main entrypoint is [main.py](main.py), and the model-training loader lives i
 
 - `scripts/prep-data.sh` builds the manifests and processed inputs.
 - `scripts/run.sh` runs the calibrated forward hybrid training flow in one go.
+- `requirements.txt` pins the Python packages used by the checked-in workflow.
 - `main.py` is the top-level CLI entrypoint.
 - `radiomics_tools/metrics/` contains the reusable engineered metric helpers.
 - `radiomics_pipeline/training/` contains the model-side data loading helpers.
@@ -61,3 +62,17 @@ The main entrypoint is [main.py](main.py), and the model-training loader lives i
 - `tests/` contains the metric unit tests.
 
 This repository contains code and the retained model artifacts, not the raw TCIA data. The recommended direction is the calibrated forward hybrid logistic-regression model: `T1c + FLAIR` radiomics plus curated molecular/basic clinical features.
+
+## Environment
+
+The shell wrappers prefer `./.venv/bin/python` when that virtualenv exists and otherwise fall back to `python3`.
+
+Install the workflow dependencies with:
+
+```bash
+python3 -m venv .venv
+./.venv/bin/python -m ensurepip --upgrade
+./.venv/bin/python -m pip install -r requirements.txt
+```
+
+`prep-data` additionally requires the raw MU-Glioma-Post TCIA folder tree and the clinical workbook at the paths shown by `python main.py prep-data --help`.
