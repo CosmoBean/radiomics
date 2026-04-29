@@ -13,12 +13,19 @@ PKG-MU-Glioma-Post/
 processed/
 processed_smoke/
 results/
+outputs/
+tmp/
 metadata/*.csv
 metadata/*.txt
 qc/histograms/
 qc/mask_overlays/
 qc/random_case_panels/
 qc/sampled_timepoints.csv
+reports/*.aux
+reports/*.docx
+reports/*.log
+reports/*.out
+reports/*.tex
 
 # Local caches and OS/editor noise
 .DS_Store
