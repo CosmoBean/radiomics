@@ -21,7 +21,7 @@ import scripts.run_postoperative_progression_surveillance as surv
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Export the best surveillance model bundle from an existing result directory."
+        description="Export the calibrated surveillance model bundle from an existing result directory."
     )
     parser.add_argument(
         "--result-dir",
@@ -32,7 +32,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=REPO_ROOT / "models" / "peak_forward",
+        default=REPO_ROOT / "models" / "calibrated",
         help="Directory where the exported bundle and metadata should be written.",
     )
     parser.add_argument(
@@ -200,9 +200,9 @@ def export_bundle(
     modality_share.to_csv(output_dir / "shap_modality_share.csv", index=False)
 
     readme_lines = [
-        "# Peak Forward Model",
+        "# Calibrated Hybrid Model",
         "",
-        "This folder contains the exported probability-capable bundle for the best observed corrected forward split.",
+        "This folder contains the exported calibrated bundle for the corrected forward hybrid logistic-regression split.",
         "",
         "- Source run: `results/repeated_forward_hybrid_basic_corrected/seed_62`",
         "- Modalities: `t1c`, `flair`",
@@ -221,7 +221,7 @@ def export_bundle(
         "",
         "```python",
         "import pickle",
-        "bundle = pickle.load(open('models/peak_forward/model_bundle.pkl', 'rb'))",
+        "bundle = pickle.load(open('models/calibrated/model_bundle.pkl', 'rb'))",
         "```",
         "",
         "Use `bundle['classifier']` on preprocessed features for raw probabilities, then pass them through",

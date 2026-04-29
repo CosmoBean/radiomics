@@ -32,12 +32,12 @@ The core pipeline is implemented in [scripts/run_postoperative_progression_surve
 | Paper-style hybrid attempt | LogReg-48 | `T1c + FLAIR` radiomics + molecular/basic clinical features | 30 patients / 96 scans | 0.621 |
 | Forward radiomics-only | LogReg-32 | `T1c + FLAIR` radiomics | 30 patients / 84 scans | 0.674 |
 | Earliest-scan hybrid screen | LogReg-48 | `T1c + FLAIR` radiomics + molecular/basic clinical features | 30 patients / 30 scans | **0.873** |
-| Forward hybrid validation | LogReg-32 | `T1c + FLAIR` radiomics + molecular/basic clinical features | 30 patients / 84 scans | **0.778** |
+| Calibrated forward hybrid | LogReg-32 | `T1c + FLAIR` radiomics + molecular/basic clinical features | 30 patients / 84 scans | **0.804** |
 
 ## Interpretation
 
 - Radiomics-only replication did not recover the target performance.
-- Hybrid gains were strong on the stricter forward and earliest-scan tasks, but not on the looser `post_progression` paper-style split.
+- Hybrid gains were strongest in the calibrated forward logistic-regression run and the earliest-scan screen, but not on the looser `post_progression` paper-style split.
 - `T1c + FLAIR` was the strongest imaging backbone.
 - Logistic regression was the most stable tabular model in held-out evaluation.
 - The best gains came from adding age, sex, and curated molecular features to the radiomics table.
@@ -52,8 +52,8 @@ The core pipeline is implemented in [scripts/run_postoperative_progression_surve
 
 - `scripts/` contains the preprocessing, training, and export entrypoints.
 - `radiomics_tools/metrics/` contains the reusable engineered metric helpers.
-- `models/peak_forward/` contains the exported probability-capable bundle.
+- `models/calibrated/` contains the exported calibrated bundle.
 - `configs/` contains the PyRadiomics configuration.
 - `tests/` contains the metric unit tests.
 
-This repository contains code and the retained model artifacts, not the raw TCIA data. The recommended direction is the forward hybrid model: `T1c + FLAIR` radiomics plus curated molecular/basic clinical features.
+This repository contains code and the retained model artifacts, not the raw TCIA data. The recommended direction is the calibrated forward hybrid logistic-regression model: `T1c + FLAIR` radiomics plus curated molecular/basic clinical features.
