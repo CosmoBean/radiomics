@@ -12,7 +12,7 @@ The goals were:
 
 ## Process
 
-The core pipeline is implemented in [scripts/run_postoperative_progression_surveillance.py](scripts/run_postoperative_progression_surveillance.py).
+The core pipeline is implemented in [radiomics_tools/workflows/train.py](radiomics_tools/workflows/train.py).
 
 1. audited and indexed the longitudinal postoperative MRI dataset
 2. built lesion masks from labels `1/2/3` and excluded resection-cavity-only regions
@@ -50,8 +50,10 @@ The core pipeline is implemented in [scripts/run_postoperative_progression_surve
 
 ## Layout
 
-- `scripts/` contains the preprocessing, training, and export entrypoints.
+- `scripts/prep-data.sh` builds the manifests and processed inputs.
+- `scripts/run.sh` runs the calibrated forward hybrid training flow in one go.
 - `radiomics_tools/metrics/` contains the reusable engineered metric helpers.
+- `radiomics_tools/workflows/` contains the Python workflow code behind the shell wrappers.
 - `models/calibrated/` contains the exported calibrated bundle.
 - `configs/` contains the PyRadiomics configuration.
 - `tests/` contains the metric unit tests.

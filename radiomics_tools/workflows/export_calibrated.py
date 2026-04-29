@@ -12,11 +12,11 @@ import pandas as pd
 import shap
 from sklearn.linear_model import LogisticRegression
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-import scripts.run_postoperative_progression_surveillance as surv
+from radiomics_tools.workflows import train as surv
 
 
 def parse_args() -> argparse.Namespace:
@@ -199,35 +199,6 @@ def export_bundle(
         modality_share["share"] = 0.0
     modality_share.to_csv(output_dir / "shap_modality_share.csv", index=False)
 
-    readme_lines = [
-        "# Calibrated Hybrid Model",
-        "",
-        "This folder contains the exported calibrated bundle for the corrected forward hybrid logistic-regression split.",
-        "",
-        "- Source run: `results/repeated_forward_hybrid_basic_corrected/seed_62`",
-        "- Modalities: `t1c`, `flair`",
-        "- Clinical feature set: `hybrid_basic`",
-        "- Output probability column: `progression_risk_probability`",
-        "",
-        "## Files",
-        "",
-        "- `model_bundle.pkl`: pickled classifier, preprocessor, calibrator, and threshold.",
-        "- `metadata.json`: exported metrics and selected features.",
-        "- `test_predictions.csv`: probability outputs for the held-out split.",
-        "- `shap_feature_importance.csv`: test-set mean absolute SHAP values for the exported logistic model.",
-        "- `shap_modality_share.csv`: modality-level SHAP aggregation.",
-        "",
-        "## Usage",
-        "",
-        "```python",
-        "import pickle",
-        "bundle = pickle.load(open('models/calibrated/model_bundle.pkl', 'rb'))",
-        "```",
-        "",
-        "Use `bundle['classifier']` on preprocessed features for raw probabilities, then pass them through",
-        "`bundle['calibrator']` to obtain calibrated progression risk probabilities.",
-    ]
-    (output_dir / "README.md").write_text("\n".join(readme_lines) + "\n", encoding="utf-8")
     return metadata, shap_df
 
 

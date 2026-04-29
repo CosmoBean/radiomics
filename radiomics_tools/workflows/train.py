@@ -1701,7 +1701,7 @@ def compute_shap_summary(
     return summary, {key: float(value) for key, value in modality_share.items()}
 
 
-def write_markdown_summary(output_path: Path, summary: dict[str, object]) -> None:
+def write_summary_text(output_path: Path, summary: dict[str, object]) -> None:
     lines = [
         "# Postoperative Progression Surveillance",
         "",
@@ -2003,7 +2003,7 @@ def main() -> None:
         "shap_modality_share": modality_share,
     }
     write_json(args.output_dir / "summary.json", summary)
-    write_markdown_summary(args.output_dir / "summary.md", summary)
+    write_summary_text(args.output_dir / "summary.txt", summary)
     write_progress(
         args.output_dir,
         {

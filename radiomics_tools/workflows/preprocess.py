@@ -396,12 +396,12 @@ def main() -> None:
         (output_root / directory_name).mkdir(parents=True, exist_ok=True)
 
     write_text(
-        output_root / "images_reoriented" / "README.md",
-        "# images_reoriented\n\nNo outputs were written because the audit found all readable volumes already aligned in `LPS` orientation.\n",
+        output_root / "images_reoriented" / "note.txt",
+        "No outputs were written because the audit found all readable volumes already aligned in LPS orientation.\n",
     )
     write_text(
-        output_root / "images_resampled" / "README.md",
-        "# images_resampled\n\nNo outputs were written because the audit found all readable volumes already sampled at `1.0 x 1.0 x 1.0 mm`.\n",
+        output_root / "images_resampled" / "note.txt",
+        "No outputs were written because the audit found all readable volumes already sampled at 1.0 x 1.0 x 1.0 mm.\n",
     )
     write_json(
         output_root / "manifests" / "preprocessing_config.json",
